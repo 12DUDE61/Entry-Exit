@@ -1,0 +1,34 @@
+//@version=6
+indicator("Clean Entry System | SOL/USDT", overlay = true, max_labels_count = 500)
+
+// Oscillator Calculation
+_Cosma(src, length) =>
+    float upper = math.sum(volume * (ta.change(src) <= 0.0 ? 0.0 : src), length)
+    float lower = math.sum(volume * (ta.change(src) >= 0.0 ? 0.0 : src), length)
+    Cosma = 100.0 - (100.0 / (1.0 + upper / lower))
+    Cosma
+
+// Input Parameters
+dir = input.string(defval = "Both", title = "Choose Direction", options = ["Long", "Short", "Both"])
+oscillator_length = input.int(14, title = "Oscillator Length", minval = 1)
+nline = _Cosma(hlc3, oscillator_length)
+
+// Fractal Calculations
+frac_up = ((high[1] > high[2]) and (high[1] > high)) or ((high[1] >= high[2]) and (high[1] > high)) or ((high[1] > high[2]) and (high[1] >= high))
+frac_dwn = ((low[1] < low[2]) and (low[1] < low)) or ((low[1] <= low[2]) and (low[1] < low)) or ((low[1] < low[2]) and (low[1] <= low))
+
+// Buy and Sell Conditions
+BuyCondition = frac_dwn and nline <= 20 and close[1] > open[1]
+SellCondition = frac_up and nline >= 80 and close[1] < open[1]
+
+// Plotting Signals
+if (BuyCondition and (dir == "Long" or dir == "Both"))
+    label.new(bar_index, low, "BUY", color=color.green, textcolor=color.white, style=label.style_label_up, size=size.normal)
+if (SellCondition and (dir == "Short" or dir == "Both"))
+    label.new(bar_index, high, "SELL", color=color.red, textcolor=color.white, style=label.style_label_down, size=size.normal)
+
+// Alerts
+if (BuyCondition and (dir == "Long" or dir == "Both"))
+    alert("Buy Signal Detected", freq=alert.freq_once_per_bar_close)
+if (SellCondition and (dir == "Short" or dir == "Both"))
+    alert("Sell Signal Detected", freq=alert.freq_once_per_bar_close)
